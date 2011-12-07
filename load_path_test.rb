@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
 #
 # @file 
-# @brief
+# @brief LOAD_PATHの実験
 # @author ongaeshi
 # @date   2011/12/05
 
-p $LOAD_PATH                    #=> ["/opt/local/lib/ruby/site_ruby/1.8", "/opt/local/lib/ruby/site_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/site_ruby", "/opt/local/lib/ruby/vendor_ruby/1.8", "/opt/local/lib/ruby/vendor_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/vendor_ruby", "/opt/local/lib/ruby/1.8", "/opt/local/lib/ruby/1.8/i686-darwin10", "."]
-
+# requireやloadはLOAD_PATHに登録されているディレクトリの中を順番に探して最初に見つかったものを採用する
+p $LOAD_PATH                    #=> ["/opt/local/lib/ruby/site_ruby/1.8", ...]
 # p $:                            # $LOAD_PATHの省略形
 
-# require 'rubygems'
-# require 'rubywho'
+# ファイルが見つからない場合は、LoadError例外
+begin
+  require 'test_script'
+rescue LoadError
+  puts "'test_script' not found."
+end
 
-# p $LOAD_PATH                    #=> ["/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin", "/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib", "/opt/local/lib/ruby/site_ruby/1.8", "/opt/local/lib/ruby/site_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/site_ruby", "/opt/local/lib/ruby/vendor_ruby/1.8", "/opt/local/lib/ruby/vendor_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/vendor_ruby", "/opt/local/lib/ruby/1.8", "/opt/local/lib/ruby/1.8/i686-darwin10", "."]
+# LOAD_PATHに適切なディレクトリを設定すると読み込めるようになる
+$LOAD_PATH.unshift "test"
+require 'test_script'
+puts test_script()
 
-# 1.who?
-
-$LOAD_PATH.unshift "lib"
-require 'rubywho'
-p $LOAD_PATH
-
-1.who?
+# LOAD_PATHに含まれたディレクトリからの相対パスでもOK
+require 'a/test_script2'
+puts a_test_script()
