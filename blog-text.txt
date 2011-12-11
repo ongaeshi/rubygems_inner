@@ -1,4 +1,4 @@
-*[ruby][gem] RubyGemsの内部を探る
+*[ruby][gem] RubyGemsはrequireの裏で何をやっているのか？
 【画像】
 ライブラリやツールをコマンド一発でインストール出来るRubyGemsはとっても便利です。自作ソフトを[https://rubygems.org/:title=RubyGems.org]に登録すれば世界中でインストールして使ってもらえます。便利なRubyGemsですが内部ではどのような仕組みで動いているのでしょうか？
 
@@ -137,7 +137,7 @@ require 'rubywho'
 RubyGemsでは Kernel#require を独自のものに置き換えることで上記の仕事をしているようです。
 
 rubygems/lib/rubygems/custom_require.rb (コメントは日本語に訳してあります)
->||
+>|ruby|
 require 'rubygems'
 
 module Kernel
@@ -174,13 +174,14 @@ module Kernel
 end
 ||<
 
-+ gem_original_require で元々の require を呼べるようにします
-+ 最初に$LOAD_PATHを探して見つかればそのまま読み込みます
-+ 見つからなければ、インストールされたgemsからマッチするファイルがあるか探して・・
-** 見つかったらそのgemをアクティベートして、$LOAD_PATHに追加します。
-** gem_original_require して読み込み完了です。
++ gem_original_require で元々の require を呼べるようにする
++ 最初に$LOAD_PATHを探して見つかればそのまま読み込む
++ 見つからなければインストールされたgemsからマッチするファイルがあるか探して、見つかればアクティベートして$LOAD_PATHに追加する
++ gem_original_require して読み込み完了
 
-はじめに$LOAD_PATHから探すのが肝です。あるgemから2つ以上のファイルをrequireする場合、2回目以降は$LOAD_PATHから読み込まれることになります(アクティベートされるのは最初の一回目だけです)。結果としてrequireの'ファイルがすでにロード済みの時にfalseを返す機能'も維持出来ます、シンプルで素晴らしい実装ですね。
+はじめに$LOAD_PATHから探すのが肝です。
+あるgemから2つ以上のファイルをrequireする場合、2回目以降は$LOAD_PATHから読み込まれることになります(アクティベートされるのは最初の一回目だけです)。
+通常requireの'ファイルがすでにロード済みの時にfalseを返す機能'も維持出来る、シンプルで素晴らしい実装ですね。
 
 ** インストールしたgemにちょっとだけ改造を施すには？ 
 
@@ -188,5 +189,14 @@ end
 - Rubyリファレンスマニュアル、[http://doc.ruby-lang.org/ja/1.9.2/class/Kernel.html:title=module Kernel] の''$LOAD_PATH''の項目
 - [http://blog.livedoor.jp/sasata299/archives/51299559.html:title=require 'rubygems' したときの挙動 - (ﾟ∀ﾟ)o彡 sasata299's blog]
 
-この記事はRuby Advent Calendarの14日目の記事でした！！
+** Ruby Advent Calendar jp: 2011
+この記事はRuby Advent Calendar jp: 2011の14日目の記事でした！！
+
+よかったらこちらもどうぞ、もっと面白い記事がたくさんあります。
+- [http://atnd.org/events/22021:title=Ruby Advent Calendar jp: 2011 : ATND]
+
+個人的なお気に入り
+- RubyデーモンでTwitterバルス！
+
+
 
