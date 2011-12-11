@@ -1,0 +1,192 @@
+*[ruby][gem] RubyGemsの内部を探る
+【画像】
+ライブラリやツールをコマンド一発でインストール出来るRubyGemsはとっても便利です。自作ソフトを[https://rubygems.org/:title=RubyGems.org]に登録すれば世界中でインストールして使ってもらえます。便利なRubyGemsですが内部ではどのような仕組みで動いているのでしょうか？
+
+** インストールしたgemはどこへいくのか？
+試しに適当なgemをインストールしてみましょう。
+>||
+$ gem install rubywho
+Successfully installed rubywho-0.4.0
+1 gem installed
+Installing ri documentation for rubywho-0.4.0...
+Installing RDoc documentation for rubywho-0.4.0...
+||<
+
+OSXのMacPorts経由でインストールした場合は、以下にインストールされます。
+
+/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/
+
+古いバージョンもインストールしてみます。
+
+>||
+$ gem install rubywho -v 0.3.0
+Fetching: rubywho-0.3.0.gem (100%)
+Successfully installed rubywho-0.3.0
+1 gem installed
+Installing ri documentation for rubywho-0.3.0...
+Installing RDoc documentation for rubywho-0.3.0...
+||<
+
+gemは複数のバージョンを同時に管理することが出来ます。rubywho-0.3.0は0.4.0の横に置かれます。
+
+- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/
+- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.3.0/
+
+rubywho-0.4.0/の下には、作者が書いたコードがテストを含めた状態で入っています。[https://github.com/ongaeshi/rubywho:title=ongaeshi/rubywho - GitHub]は完全なrubywhoのソースコード一式ですが、gemの中身とほとんど変わりません。
+
+gemをフォルダごと適当な場所にコピーすればテストも実行出来ますし改造することも可能です(unix環境ではパーミッションを直す必要があるかもしれません)。
+
+>||
+$ cp -rpv /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/ ~/tmp/rubywho
+/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/ -> /Users/ongaeshi/tmp/rubywho
+/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0//.document -> /Users/ongaeshi/tmp/rubywho/.document
+.
+.
+$ cd ~/tmp/rubywho/
+$ rake test
+(in /Users/ongaeshi/tmp/rubywho)
+/opt/local/bin/ruby -I"lib:lib:test" "/opt/local/lib/ruby/gems/1.8/gems/rake-0.8.7/lib/rake/rake_test_loader.rb" "test/test_rubywho.rb" 
+Loaded suite /opt/local/lib/ruby/gems/1.8/gems/rake-0.8.7/lib/rake/rake_test_loader
+Started
+......
+Finished in 0.016145 seconds.
+
+6 tests, 48 assertions, 0 failures, 0 errors
+||<
+
+何かRubyで作りたいものがある時は、似たようなことを実現しているgemを見つけ、そのソースコードを読むとかなり役立ちます。
+
+** 最初に$LOAD_PATHの話
+まずは以下のプログラムを実行してみましょう。
+
+>|ruby|
+# requireやloadはLOAD_PATHに登録されているディレクトリの中を順番に探して最初に見つかったものを採用する
+p $LOAD_PATH                    #=> ["/opt/local/lib/ruby/site_ruby/1.8", ...]
+# p $:                            # $LOAD_PATHの省略形
+
+# ファイルが見つからない場合は、LoadError例外
+begin
+  require 'test_script'
+rescue LoadError
+  puts "'test_script' not found."
+end
+
+# LOAD_PATHに適切なディレクトリを設定すると読み込めるようになる
+$LOAD_PATH.unshift "test"
+require 'test_script'
+puts test_script()
+
+# LOAD_PATHに含まれたディレクトリからの相対パスでもOK
+require 'a/test_script2'
+puts a_test_script()
+||<
+
+実行結果
+>||
+$ ruby ./load_path_test.rb
+["/opt/local/lib/ruby/site_ruby/1.8", "/opt/local/lib/ruby/site_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/site_ruby", "/opt/local/lib/ruby/vendor_ruby/1.8", "/opt/local/lib/ruby/vendor_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/vendor_ruby", "/opt/local/lib/ruby/1.8", "/opt/local/lib/ruby/1.8/i686-darwin10", "."]
+'test_script' not found.
+test_script!!
+a/test_script!!
+||<
+
+Rubyのライブラリ読み込みの仕組みはとても単純です。
+
++ $LOAD_PATH($:)を順に辿る
++ 目的のファイルが見つかったら終了
++ 最後まで来たらLoadError例外
+
+C言語やC++に慣れている人は、gccのインクルードパス(-Iオプション)と同じようなもの、と言うと分かりやすいかもしれません。
+
+Rubyでは$LOAD_PATHを実行時に変更することが可能なため、C言語と比べて柔軟な動作をすることが出来ます。
+今回説明するRubyGemsもそうですし、ユニットテスト実行のためのRake::TestTaskも$LOAD_PATHを利用して実現されています。
+
+** require 'rubygems'すると、$LOAD_PATHにどのような変化があるか？
+以下のプログラムを実行してみましょう。
+>|ruby|
+# gemをrequireするとLOAD_PATHが変化する
+# require 'rubywho' すると、 gems/rubywho-0.4.0/bin や gems/rubywho-0.4.0 が追加される
+require 'rubygems'
+require 'rubywho'
+p $LOAD_PATH                    #=> ["/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin", "/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib", ...]
+||<
+
+実行結果
+>||
+$ ruby ./require_gem_test.rb
+["/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin", "/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib", "/opt/local/lib/ruby/site_ruby/1.8", "/opt/local/lib/ruby/site_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/site_ruby", "/opt/local/lib/ruby/vendor_ruby/1.8", "/opt/local/lib/ruby/vendor_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/vendor_ruby", "/opt/local/lib/ruby/1.8", "/opt/local/lib/ruby/1.8/i686-darwin10", "."]
+||<
+
+- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin
+- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib
+
+の2つが$LOAD_PATHの先頭に追加されています。この状態で
+
+>||
+require 'rubywho'
+||<
+
+すると
+
++ Rubyは$LOAD_PATHを先頭から辿る
++ /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib/rubywho.rb が最初に見つかって読み込まれる。
+
+つまりRubyGemsの仕事は、登録されているライブラリパスの中から適切なものを探してそれを$LOAD_PATHに追加する、ということのようです！！
+
+** コードリーディング、rubygems/lib/rubygems/custom_require.rb
+RubyGemsでは Kernel#require を独自のものに置き換えることで上記の仕事をしているようです。
+
+rubygems/lib/rubygems/custom_require.rb (コメントは日本語に訳してあります)
+>||
+require 'rubygems'
+
+module Kernel
+  ##
+  # RubyGemsがロードされる前のKernel#require
+
+  alias gem_original_require require
+
+  ##
+  # RubyGemsがrequireされた時、Kernel#requireは、必要な時にgemを読み込む独自の実装に置き換えられます。
+  #
+  # <tt>require 'x'</tt> した時、以下のことが起きる:
+  # * もし現在の$LOAD_PATHからファイルが読み込める時は読み込む
+  # * 見つからなければ、インストールされたgemsからマッチするファイルがあるか探す。
+  #   もし 'y' gem から見つかれば、そのgemをアクティベートする ($LOAD_PATHに追加する)
+  #
+  # 通常<tt>require</tt>の'ファイルがすでにロード済みの時にfalseを返す機能'は維持している。
+  #
+  def require(path) # :doc:
+    gem_original_require path
+  rescue LoadError => load_error
+    if load_error.message =~ /#{Regexp.escape path}\z/ and
+       spec = Gem.searcher.find(path) then
+      Gem.activate(spec.name, "= #{spec.version}")
+      gem_original_require path
+    else
+      raise load_error
+    end
+  end
+
+  private :require
+  private :gem_original_require
+
+end
+||<
+
++ gem_original_require で元々の require を呼べるようにします
++ 最初に$LOAD_PATHを探して見つかればそのまま読み込みます
++ 見つからなければ、インストールされたgemsからマッチするファイルがあるか探して・・
+** 見つかったらそのgemをアクティベートして、$LOAD_PATHに追加します。
+** gem_original_require して読み込み完了です。
+
+はじめに$LOAD_PATHから探すのが肝です。あるgemから2つ以上のファイルをrequireする場合、2回目以降は$LOAD_PATHから読み込まれることになります(アクティベートされるのは最初の一回目だけです)。結果としてrequireの'ファイルがすでにロード済みの時にfalseを返す機能'も維持出来ます、シンプルで素晴らしい実装ですね。
+
+** インストールしたgemにちょっとだけ改造を施すには？ 
+
+** 参考文献
+- Rubyリファレンスマニュアル、[http://doc.ruby-lang.org/ja/1.9.2/class/Kernel.html:title=module Kernel] の''$LOAD_PATH''の項目
+- [http://blog.livedoor.jp/sasata299/archives/51299559.html:title=require 'rubygems' したときの挙動 - (ﾟ∀ﾟ)o彡 sasata299's blog]
+
+この記事はRuby Advent Calendarの14日目の記事でした！！
+
