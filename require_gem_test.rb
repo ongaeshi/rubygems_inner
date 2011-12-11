@@ -10,11 +10,3 @@
 require 'rubygems'
 require 'rubywho'
 p $LOAD_PATH                    #=> ["/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin", "/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib", ...]
-
-# 1.who?
-
-$LOAD_PATH.unshift "lib"
-require 'rubywho'
-p $LOAD_PATH
-
-1.who?
