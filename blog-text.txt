@@ -183,11 +183,141 @@ end
 あるgemから2つ以上のファイルをrequireする場合、2回目以降は$LOAD_PATHから読み込まれることになります(アクティベートされるのは最初の一回目だけです)。
 通常requireの'ファイルがすでにロード済みの時にfalseを返す機能'も維持出来る、シンプルで素晴らしい実装ですね。
 
-** インストールしたgemにちょっとだけ改造を施すには？ 
+** gem本体を書き換えずに特定のアプリ上でのみ挙動を変更するには？ 
+自分のアプリケーションが特定のgemを利用している時、一部の挙動に問題があることがあります。もちろんgemに対してパッチを送るのがベストですが、そのパッチが棄却されたり取り込まれたバージョンがなかなかリリースされないこともあるはずです。そんな時はどのように対処すればいいのでしょうか？gem本体を書き換えずに特定のアプリ上でのみ挙動の一部を書き換えることは可能なのでしょうか？
 
-** 参考文献
-- Rubyリファレンスマニュアル、[http://doc.ruby-lang.org/ja/1.9.2/class/Kernel.html:title=module Kernel] の''$LOAD_PATH''の項目
-- [http://blog.livedoor.jp/sasata299/archives/51299559.html:title=require 'rubygems' したときの挙動 - (ﾟ∀ﾟ)o彡 sasata299's blog]
+もちろん$LOAD_PATHを利用すれば可能です！！
+
+半年程前、[http://milkode.ongaeshi.me/wiki:title=Milkode]というアプリケーションを作っていた時に[https://rubygems.org/gems/archive-zip:title=archive-zip]というgemをzipファイルの展開に使うことにしました。gem自体は使いやすくて問題もなかったのですが、当時最新だった0.3ではRuby1.9で動かなかったことが問題でした(最新の0.4.0では修正済みです)。パッチを送ったもののすでに他のアプローチをとっていたため取り込まれず、Ruby1.9で動くバージョンが出るのも少し後になりそうでした。そこで、1.9で動くパッチをmilkode内部でだけ当ててarchive-zipが対応したらそのパッチを外す、というアプローチをとることにしました。
+
+まずは問題となったコードです。 
+>|ruby|
+require 'archive/support/io' 
+||<
+というパスでrequireされます。
+
+[https://github.com/javanthropus/archive-zip/blob/ea0ec513f2b2837810ee4c60d917e527c9b4427a/lib/archive/support/io.rb:title=lib/archive/support/io.rb at ebcc1e43c64c977281bb51953a870d84960c8bab from javanthropus/archive-zip - GitHub]
+>|ruby|
+require 'readbytes'
+
+class IO
+  # Returns +true+ if the seek method of this IO instance would succeed, +false+
+  # otherwise.
+  def seekable?
+    begin
+      pos
+      true
+    rescue SystemCallError
+      false
+    end
+  end
+end
+||<
+
+細かい説明は省略しますが'readbytes'というライブラリがRuby1.9では無くなっているのが原因でした。色々と考えた結果、archive/support/io.rb が以下のようになればRuby1.8, 1.9 の両方で動くことが分かりました。
+
+>|ruby|
+# -*- coding: utf-8 -*-
+#
+# @file
+# @brief archive-zip/lib/archive/support/io.rb patch, removed in the future.
+# @author ongaeshi
+# @date 2011/08/04
+
+begin
+  require 'readbytes'
+rescue LoadError
+  # for Ruby 1.9.2
+  class TruncatedDataError<IOError
+    def initialize(mesg, data) # :nodoc:
+      @data = data
+      super(mesg)
+    end
+
+    # The read portion of an IO#readbytes attempt.
+    attr_reader :data
+  end
+  
+  class IO
+    # Reads exactly +n+ bytes.
+    #
+    # If the data read is nil an EOFError is raised.
+    #
+    # If the data read is too short a TruncatedDataError is raised and the read
+    # data is obtainable via its #data method.
+    def readbytes(n)
+      str = read(n)
+      if str == nil
+        raise EOFError, "End of file reached"
+      end
+      if str.size < n
+        raise TruncatedDataError.new("data truncated", str)
+      end
+      str
+    end
+  end
+end
+  
+class IO
+  # Returns +true+ if the seek method of this IO instance would succeed, +false+
+  # otherwise.
+  def seekable?
+    begin
+      pos
+      true
+    rescue SystemCallError
+      false
+    end
+  end
+end
+||<
+
+ここからはmilkode本体を書き換えていきます。
+
++ milkode/vendor/archive/support/io.rb を追加します。
+-- [https://github.com/ongaeshi/milkode/blob/archive-zip-patch/vendor/archive/support/io.rb:title=vendor/archive/support/io.rb at archive-zip-patch from ongaeshi/milkode - GitHub]
++ milkode/lib/common/archive-zip.rb というファイルを作ります。
+-- [https://github.com/ongaeshi/milkode/blob/archive-zip-patch/lib/milkode/common/archive-zip.rb:title=lib/milkode/common/archive-zip.rb at archive-zip-patch from ongaeshi/milkode - GitHub]
++ require 'archive/zip' している箇所を require 'milkode/common/archive-zip' に置き換えます。
+-- [https://github.com/ongaeshi/milkode/commit/0e72a913428905e9d13e017f1b9258f8031e40e8#diff-1:title=Commit 0e72a913428905e9d13e017f1b9258f8031e40e8 to ongaeshi/milkode - GitHub]
+
+これで準備は終わりです！！ 
+
+lib/common/archive-zip.rb
+>|ruby|
+# -*- coding: utf-8 -*-
+#
+# @file
+# @brief archive-zipがRuby1.9.2に対応するまでのパッチ
+# @author ongaeshi
+# @date 2011/08/04
+
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '../../../vendor')
+require 'archive/zip'
+||<
+
+''milkode/vendor''を$LOAD_PATHの先頭に挿入するため、
+
++ milkode/vendor 以下にファイルが存在する場合は優先して読み込み
++ 見つからなかった場合は通常の読み込み処理へ
+
+となります(先ほどのRubyGemsの読み込みルールを思い出して下さい)。
+
+今回の場合 milkode/vendor/archive/support/io.rb があるので、
+
+>|ruby|
+require 'archive/support/io'
+||<
+
+の時vendor/以下のファイルが通常のgemコードよりも優先して読み込まれます。まさに期待通りの動作です！！
+
+gem本体のバージョンが上がりパッチを当てる必要がなくなったら$LOAD_PATH.unshiftの部分をコメントアウトしましょう。
+[https://github.com/ongaeshi/milkode/commit/c727625e7ba114b72d5ae5b0290e610ae6bb5fd1#diff-1:title=Commit c727625e7ba114b72d5ae5b0290e610ae6bb5fd1 to ongaeshi/milkode - GitHub]
+>|ruby|
+# 0.4.0になったため、必要なくなった。
+# $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '../../../vendor')
+require 'archive/zip'
+||<
 
 ** Ruby Advent Calendar jp: 2011
 この記事はRuby Advent Calendar jp: 2011の14日目の記事でした！！
@@ -195,8 +325,6 @@ end
 よかったらこちらもどうぞ、もっと面白い記事がたくさんあります。
 - [http://atnd.org/events/22021:title=Ruby Advent Calendar jp: 2011 : ATND]
 
-個人的なお気に入り
-- RubyデーモンでTwitterバルス！
-
-
-
+** 参考文献
+- Rubyリファレンスマニュアル、[http://doc.ruby-lang.org/ja/1.9.2/class/Kernel.html:title=module Kernel] の''$LOAD_PATH''の項目
+- [http://blog.livedoor.jp/sasata299/archives/51299559.html:title=require 'rubygems' したときの挙動 - (ﾟ∀ﾟ)o彡 sasata299's blog]
