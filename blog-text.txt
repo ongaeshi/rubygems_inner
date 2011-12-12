@@ -326,6 +326,6 @@ require 'archive/zip'
 - [http://atnd.org/events/22021:title=Ruby Advent Calendar jp: 2011 : ATND]
 
 ** 参考文献
+- 今回書いたソースコード等 [https://github.com/ongaeshi/rubygems_inner:title=ongaeshi/rubygems_inner - GitHub]
 - Rubyリファレンスマニュアル、[http://doc.ruby-lang.org/ja/1.9.2/class/Kernel.html:title=module Kernel] の''$LOAD_PATH''の項目
 - [http://blog.livedoor.jp/sasata299/archives/51299559.html:title=require 'rubygems' したときの挙動 - (ﾟ∀ﾟ)o彡 sasata299's blog]
-
