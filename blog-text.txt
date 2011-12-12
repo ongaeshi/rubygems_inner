@@ -1,5 +1,5 @@
 *[ruby][gem] RubyGemsはrequireの裏で何をやっているのか？
-【画像】
+[f:id:tuto0621:20111213005815p:image]
 ライブラリやツールをコマンド一発でインストール出来るRubyGemsはとっても便利です。自作ソフトを[https://rubygems.org/:title=RubyGems.org]に登録すれば世界中でインストールして使ってもらえます。便利なRubyGemsですが内部ではどのような仕組みで動いているのでしょうか？
 
 ** インストールしたgemはどこへいくのか？
@@ -13,8 +13,7 @@ Installing RDoc documentation for rubywho-0.4.0...
 ||<
 
 OSXのMacPorts経由でインストールした場合は、以下にインストールされます。
-
-/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/
+<span class="deco" style="font-style:italic;">/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/</span>
 
 古いバージョンもインストールしてみます。
 
@@ -29,8 +28,8 @@ Installing RDoc documentation for rubywho-0.3.0...
 
 gemは複数のバージョンを同時に管理することが出来ます。rubywho-0.3.0は0.4.0の横に置かれます。
 
-- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/
-- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.3.0/
+- <span class="deco" style="font-style:italic;">/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/</span>
+- <span class="deco" style="font-style:italic;">/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.3.0/</span>
 
 rubywho-0.4.0/の下には、作者が書いたコードがテストを含めた状態で入っています。[https://github.com/ongaeshi/rubywho:title=ongaeshi/rubywho - GitHub]は完全なrubywhoのソースコード一式ですが、gemの中身とほとんど変わりません。
 
@@ -56,7 +55,7 @@ Finished in 0.016145 seconds.
 
 何かRubyで作りたいものがある時は、似たようなことを実現しているgemを見つけ、そのソースコードを読むとかなり役立ちます。
 
-** 最初に$LOAD_PATHの話
+** $LOAD_PATHって何者？
 まずは以下のプログラムを実行してみましょう。
 
 >|ruby|
@@ -92,14 +91,13 @@ a/test_script!!
 
 Rubyのライブラリ読み込みの仕組みはとても単純です。
 
-+ $LOAD_PATH($:)を順に辿る
++ <span class="deco" style="font-weight:bold;">$LOAD_PATH</span>(<span class="deco" style="font-weight:bold;">$:</span>)を順に辿る
 + 目的のファイルが見つかったら終了
-+ 最後まで来たらLoadError例外
++ 最後まで来たら<span class="deco" style="font-weight:bold;">LoadError</span>例外
 
 C言語やC++に慣れている人は、gccのインクルードパス(-Iオプション)と同じようなもの、と言うと分かりやすいかもしれません。
 
-Rubyでは$LOAD_PATHを実行時に変更することが可能なため、C言語と比べて柔軟な動作をすることが出来ます。
-今回説明するRubyGemsもそうですし、ユニットテスト実行のためのRake::TestTaskも$LOAD_PATHを利用して実現されています。
+Rubyでは<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>を実行時に変更することが可能なため、C言語と比べて柔軟な動作をすることが出来ます。
 
 ** require 'rubygems'すると、$LOAD_PATHにどのような変化があるか？
 以下のプログラムを実行してみましょう。
@@ -117,10 +115,10 @@ $ ruby ./require_gem_test.rb
 ["/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin", "/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib", "/opt/local/lib/ruby/site_ruby/1.8", "/opt/local/lib/ruby/site_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/site_ruby", "/opt/local/lib/ruby/vendor_ruby/1.8", "/opt/local/lib/ruby/vendor_ruby/1.8/i686-darwin10", "/opt/local/lib/ruby/vendor_ruby", "/opt/local/lib/ruby/1.8", "/opt/local/lib/ruby/1.8/i686-darwin10", "."]
 ||<
 
-- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin
-- /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib
+- <span class="deco" style="font-style:italic;">/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/bin</span>
+- <span class="deco" style="font-style:italic;">/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib</span>
 
-の2つが$LOAD_PATHの先頭に追加されています。この状態で
+の2つが<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>の先頭に追加されています。この状態で
 
 >||
 require 'rubywho'
@@ -128,15 +126,15 @@ require 'rubywho'
 
 すると
 
-+ Rubyは$LOAD_PATHを先頭から辿る
-+ /opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib/rubywho.rb が最初に見つかって読み込まれる。
++ Rubyは<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>を先頭から辿る
++ <span class="deco" style="font-style:italic;">/opt/local/lib/ruby/gems/1.8/gems/rubywho-0.4.0/lib/rubywho.rb</span> が最初に見つかって読み込まれる。
 
-つまりRubyGemsの仕事は、登録されているライブラリパスの中から適切なものを探してそれを$LOAD_PATHに追加する、ということのようです！！
+つまりRubyGemsの仕事は「登録されているライブラリパスの中から適切なものを探してそれを<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>に追加する」ということのようです。
 
 ** コードリーディング、rubygems/lib/rubygems/custom_require.rb
-RubyGemsでは Kernel#require を独自のものに置き換えることで上記の仕事をしているようです。
+RubyGemsでは <span class="deco" style="font-weight:bold;">Kernel#require</span> を独自のものに置き換えることで上記の仕事をしているようです。
 
-rubygems/lib/rubygems/custom_require.rb (コメントは日本語に訳してあります)
+<span class="deco" style="font-style:italic;">rubygems/lib/rubygems/custom_require.rb</span> (コメントは日本語に訳してあります)
 >|ruby|
 require 'rubygems'
 
@@ -174,29 +172,26 @@ module Kernel
 end
 ||<
 
-+ gem_original_require で元々の require を呼べるようにする
-+ 最初に$LOAD_PATHを探して見つかればそのまま読み込む
-+ 見つからなければインストールされたgemsからマッチするファイルがあるか探して、見つかればアクティベートして$LOAD_PATHに追加する
-+ gem_original_require して読み込み完了
++ <span class="deco" style="font-weight:bold;">gem_original_require</span> で元々の require を呼べるようにする
++ 最初に<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>を探して見つかればそのまま読み込む
++ 見つからなければインストールされたgemsからマッチするファイルがあるか探して、見つかればアクティベートして<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>に追加する
++ <span class="deco" style="font-weight:bold;">gem_original_require</span> して読み込み完了
 
-はじめに$LOAD_PATHから探すのが肝です。
-あるgemから2つ以上のファイルをrequireする場合、2回目以降は$LOAD_PATHから読み込まれることになります(アクティベートされるのは最初の一回目だけです)。
-通常requireの'ファイルがすでにロード済みの時にfalseを返す機能'も維持出来る、シンプルで素晴らしい実装ですね。
+はじめに<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>から探すのが肝です。
+あるgemから2つ以上のファイルをrequireする場合、2回目以降は<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>から読み込まれることになります(アクティベートされるのは最初の一回目だけです)。
+通常requireの「ファイルがすでにロード済みの時にfalseを返す」機能も維持出来る、シンプルで素晴らしい実装ですね。
 
 ** gem本体を書き換えずに特定のアプリ上でのみ挙動を変更するには？ 
 自分のアプリケーションが特定のgemを利用している時、一部の挙動に問題があることがあります。もちろんgemに対してパッチを送るのがベストですが、そのパッチが棄却されたり取り込まれたバージョンがなかなかリリースされないこともあるはずです。そんな時はどのように対処すればいいのでしょうか？gem本体を書き換えずに特定のアプリ上でのみ挙動の一部を書き換えることは可能なのでしょうか？
 
-もちろん$LOAD_PATHを利用すれば可能です！！
+もちろん<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>を利用すれば可能です！！
 
-半年程前、[http://milkode.ongaeshi.me/wiki:title=Milkode]というアプリケーションを作っていた時に[https://rubygems.org/gems/archive-zip:title=archive-zip]というgemをzipファイルの展開に使うことにしました。gem自体は使いやすくて問題もなかったのですが、当時最新だった0.3ではRuby1.9で動かなかったことが問題でした(最新の0.4.0では修正済みです)。パッチを送ったもののすでに他のアプローチをとっていたため取り込まれず、Ruby1.9で動くバージョンが出るのも少し後になりそうでした。そこで、1.9で動くパッチをmilkode内部でだけ当ててarchive-zipが対応したらそのパッチを外す、というアプローチをとることにしました。
+半年程前、[http://milkode.ongaeshi.me/wiki:title=Milkode]というアプリケーションを作っていた時に[https://rubygems.org/gems/archive-zip:title=archive-zip]というgemをzipファイルの展開に使うことにしました。gem自体は使いやすくて問題もなかったのですが、当時最新だった0.3ではRuby1.9で動かなかったことが問題でした(最新の0.4.0では修正済みです)。パッチを送ったもののすでに他のアプローチをとっていたため取り込まれず、Ruby1.9で動くバージョンが出るのも少し後になりそうでした。
+
+そこで「1.9で動くパッチをmilkode内部でだけ当ててarchive-zipが対応したらそのパッチを外す」というアプローチをとることにしました。
 
 まずは問題となったコードです。 
->|ruby|
-require 'archive/support/io' 
-||<
-というパスでrequireされます。
-
-[https://github.com/javanthropus/archive-zip/blob/ea0ec513f2b2837810ee4c60d917e527c9b4427a/lib/archive/support/io.rb:title=lib/archive/support/io.rb at ebcc1e43c64c977281bb51953a870d84960c8bab from javanthropus/archive-zip - GitHub]
+[https://github.com/javanthropus/archive-zip/blob/ea0ec513f2b2837810ee4c60d917e527c9b4427a/lib/archive/support/io.rb:title=lib/archive/support/io.rb at GitHub]
 >|ruby|
 require 'readbytes'
 
@@ -214,7 +209,12 @@ class IO
 end
 ||<
 
-細かい説明は省略しますが'readbytes'というライブラリがRuby1.9では無くなっているのが原因でした。色々と考えた結果、archive/support/io.rb が以下のようになればRuby1.8, 1.9 の両方で動くことが分かりました。
+>|ruby|
+require 'archive/support/io' 
+||<
+というパスでrequireされます。
+
+細かい説明は省略しますが'readbytes'というライブラリがRuby1.9では無くなっているのが原因でした。色々と考えた結果、<span class="deco" style="font-style:italic;">archive/support/io.rb</span> が以下のようになればRuby1.8, 1.9 の両方で動くことが分かりました。
 
 >|ruby|
 # -*- coding: utf-8 -*-
@@ -274,16 +274,15 @@ end
 
 ここからはmilkode本体を書き換えていきます。
 
-+ milkode/vendor/archive/support/io.rb を追加します。
--- [https://github.com/ongaeshi/milkode/blob/archive-zip-patch/vendor/archive/support/io.rb:title=vendor/archive/support/io.rb at archive-zip-patch from ongaeshi/milkode - GitHub]
-+ milkode/lib/common/archive-zip.rb というファイルを作ります。
--- [https://github.com/ongaeshi/milkode/blob/archive-zip-patch/lib/milkode/common/archive-zip.rb:title=lib/milkode/common/archive-zip.rb at archive-zip-patch from ongaeshi/milkode - GitHub]
-+ require 'archive/zip' している箇所を require 'milkode/common/archive-zip' に置き換えます。
--- [https://github.com/ongaeshi/milkode/commit/0e72a913428905e9d13e017f1b9258f8031e40e8#diff-1:title=Commit 0e72a913428905e9d13e017f1b9258f8031e40e8 to ongaeshi/milkode - GitHub]
++ <span class="deco" style="font-style:italic;">milkode/vendor/archive/support/io.rb</span> を追加します。
+-- [https://github.com/ongaeshi/milkode/blob/archive-zip-patch/vendor/archive/support/io.rb:title=vendor/archive/support/io.rb at GitHub]
++ <span class="deco" style="font-style:italic;">milkode/lib/milkode/common/archive-zip.rb</span> というファイルを作ります。
+-- [https://github.com/ongaeshi/milkode/blob/archive-zip-patch/lib/milkode/common/archive-zip.rb:title=lib/milkode/common/archive-zip.rb at GitHub]
++ <span class="deco" style="font-weight:bold;">require 'archive/zip'</span> している箇所を <span class="deco" style="font-weight:bold;">require 'milkode/common/archive-zip'</span> に置き換えます。
+-- [https://github.com/ongaeshi/milkode/commit/0e72a913428905e9d13e017f1b9258f8031e40e8#diff-1:title=Commit 0e72a913428905e9d13e017f1b9258f8031e40e8 at GitHub]
 
 これで準備は終わりです！！ 
-
-lib/common/archive-zip.rb
+<span class="deco" style="font-style:italic;">lib/common/archive-zip.rb</span>
 >|ruby|
 # -*- coding: utf-8 -*-
 #
@@ -295,23 +294,24 @@ lib/common/archive-zip.rb
 $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '../../../vendor')
 require 'archive/zip'
 ||<
+<span class="deco" style="font-weight:bold;">File.join(File.dirname(__FILE__), 'path/to/dir')</span> はスクリプト位置からの相対パスを絶対パスに変換するための定型文です。
+<span class="deco" style="font-style:italic;">milkode/lib/milkode/common/../../../vendor</span>なので、結果として<span class="deco" style="font-style:italic;">milkode/vendor</span>に変換されます。
+<span class="deco" style="font-style:italic;">milkode/vendor</span>が<span class="deco" style="font-weight:bold;">$LOAD_PATH</span>の先頭に挿入されるため、
 
-''milkode/vendor''を$LOAD_PATHの先頭に挿入するため、
-
-+ milkode/vendor 以下にファイルが存在する場合は優先して読み込み
++ <span class="deco" style="font-style:italic;">milkode/vendor</span> 以下にファイルが存在する場合は優先して読み込み
 + 見つからなかった場合は通常の読み込み処理へ
 
 となります(先ほどのRubyGemsの読み込みルールを思い出して下さい)。
 
-今回の場合 milkode/vendor/archive/support/io.rb があるので、
+今回の場合 <span class="deco" style="font-style:italic;">milkode/vendor/archive/support/io.rb</span> があるので、
 
 >|ruby|
 require 'archive/support/io'
 ||<
 
-の時vendor/以下のファイルが通常のgemコードよりも優先して読み込まれます。まさに期待通りの動作です！！
+の時、<span class="deco" style="font-style:italic;">vendor/</span>以下のファイルが通常のgemコードよりも優先して読み込まれます。まさに期待通りの動作です！！
 
-gem本体のバージョンが上がりパッチを当てる必要がなくなったら$LOAD_PATH.unshiftの部分をコメントアウトしましょう。
+gem本体のバージョンが上がりパッチを当てる必要がなくなったら<span class="deco" style="font-weight:bold;">$LOAD_PATH.unshift</span>の部分をコメントアウトしましょう。
 [https://github.com/ongaeshi/milkode/commit/c727625e7ba114b72d5ae5b0290e610ae6bb5fd1#diff-1:title=Commit c727625e7ba114b72d5ae5b0290e610ae6bb5fd1 to ongaeshi/milkode - GitHub]
 >|ruby|
 # 0.4.0になったため、必要なくなった。
@@ -328,3 +328,4 @@ require 'archive/zip'
 ** 参考文献
 - Rubyリファレンスマニュアル、[http://doc.ruby-lang.org/ja/1.9.2/class/Kernel.html:title=module Kernel] の''$LOAD_PATH''の項目
 - [http://blog.livedoor.jp/sasata299/archives/51299559.html:title=require 'rubygems' したときの挙動 - (ﾟ∀ﾟ)o彡 sasata299's blog]
+
